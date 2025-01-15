@@ -1,5 +1,6 @@
 import express from "express";
 import Book from "../model/BookModel.js";
+import Stripe from "stripe";
 import uploads from "../helpers/CloudinaryUpload.js";
 import dotenv from "dotenv";
 
@@ -15,6 +16,11 @@ cloudinary.config({
   api_key: process.env.API_KEY,
   api_secret: process.env.API_SECRET,
 });
+
+
+const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
+
+
 
 const BookRoutes = express.Router();
 
@@ -169,5 +175,48 @@ BookRoutes.put(
     }
   }
 );
+
+BookRoutes.post('/checkout',async(req,res)=>{
+  const {bookId} = req.body;
+  console.log(bookId)
+  try{
+    const book = await Book.findById(bookId);
+    if(!book){
+      return res.status(404).send({message: "Book not found"})
+    }
+    const totalPrice = book.price;
+    console.log(totalPrice)
+
+
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: book.title,
+              description: book.author,
+            },
+            unit_amount: book.price, 
+          },
+          quantity: 1,
+        },
+      ],
+      mode: 'payment',
+      success_url: "http://localhost:5173/success?session_id={CHECKOUT_SESSION_ID}",
+      cancel_url: `http://localhost:5173/cancel`,
+    });
+
+    // Send the session URL to the frontend
+    res.send({ checkoutUrl: session.url });
+  }
+  catch(error){
+    res.status(500).send({message: error.message})
+  }
+  
+
+})
+
 
 export default BookRoutes;

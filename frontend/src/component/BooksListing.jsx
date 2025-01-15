@@ -23,6 +23,17 @@ const BookList =() => {
       console.error(error);
     }
   }
+
+  const handlePayment = async (bookId) => {
+    try {
+      const response = await axios.post('http://localhost:8000/api/books/checkout', { bookId });
+      console.log(response);
+      window.location.href = response.data.checkoutUrl;
+    } catch (error) {
+      console.error("Error creating checkout session", error);
+    }
+  };
+
     
   return (
     <div>
@@ -37,8 +48,8 @@ const BookList =() => {
               <div>
                 {book?.price ? 
                 <div>
-                    <button>{book.price}  Pay Now</button>
-                </div>
+                <button onClick={() => handlePayment(book._id)}>Pay Now: ${book.price / 100}</button>
+              </div>
                 :  
                 <>
                 <strong>Download PDF:</strong>
